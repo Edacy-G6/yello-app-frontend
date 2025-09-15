@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, Theme } from '../types';
+import type { AuthUser, Theme } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 interface AppState {
   // User state
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   
   // UI state
@@ -14,7 +14,7 @@ interface AppState {
   error: string | null;
   
   // Actions
-  setUser: (user: User | null) => void;
+  setUser: (user: AuthUser | null) => void;
   setTheme: (theme: Theme) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;

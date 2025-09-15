@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '../components/ui';
+import { Button, Input, Card, CardHeader, CardTitle, CardContent, Textarea } from '../components/ui';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -60,13 +60,13 @@ export default function ContactPage() {
                 <label htmlFor="message" className="block text-sm font-medium mb-2">
                   Message
                 </label>
-                <textarea
+                <Textarea
                   id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
                   rows={4}
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Votre message..."
                   required
                 />
               </div>
