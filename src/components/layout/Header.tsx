@@ -76,7 +76,7 @@ export default function Header({ showSidebar = false, onToggleSidebar }: HeaderP
           <div className="flex items-center">
             <Link
               to={ROUTES.HOME}
-              className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600"
+              className="text-2xl font-bold text-[#E3AC02]"
             >
               Yello
             </Link>

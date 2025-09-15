@@ -22,7 +22,7 @@ export default function RegisterPage() {
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="text-center">
             <Link to={ROUTES.HOME} className="inline-block">
-              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600 mb-2">
+              <h1 className="text-4xl font-bold text-[#E3AC02] mb-2">
                 Yello
               </h1>
             </Link>

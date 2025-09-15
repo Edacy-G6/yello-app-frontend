@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
-import { ROUTES } from '../constants';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { ROUTES } from '../../constants';
 import { Upload, FileText, Sparkles } from 'lucide-react';
 
 interface UploadedFile {
@@ -11,7 +11,7 @@ interface UploadedFile {
   type: string;
 }
 
-export default function ImportPdfPage() {
+export function ImportPdfComponent() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { MOCK_COURSE_CONTENT, ROUTES } from '../constants';
-import type { CourseContent } from '../types';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { MOCK_COURSE_CONTENT, ROUTES } from '../../constants';
+import type { CourseContent } from '../../types';
 import { 
   Bold, 
   Italic, 
@@ -16,7 +16,11 @@ import {
   Save
 } from 'lucide-react';
 
-export default function CourseEditorPage() {
+interface CourseEditorProps {
+  courseId: string;
+}
+
+export function CourseEditor({ courseId }: CourseEditorProps) {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [, setShowFinalization] = useState(false);
@@ -102,6 +106,7 @@ export default function CourseEditorPage() {
               <h1 className="text-2xl font-bold text-foreground">
                 Introduction_à_la_Physique_101
               </h1>
+              <p className="text-sm text-muted-foreground">ID: {courseId}</p>
             </div>
           </div>
           

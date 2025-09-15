@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { useAuth } from '../hooks/useAuth';
 import { MOCK_COURSES, MOCK_QUICK_START_STEPS, MOCK_DASHBOARD_STATS, ROUTES } from '../constants';
+import { ImportPdfComponent } from '../components/teacher/ImportPdfComponent';
+import { CourseEditor } from '../components/editor/CourseEditor';
 import { 
   Upload, 
   BookOpen, 
@@ -15,7 +17,24 @@ import {
 
 export default function TeacherDashboardPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  
+  // Détecter si on affiche un composant spécifique
+  const isImportPdf = location.pathname.includes('import-pdf');
+  const isCourseEditor = location.pathname.includes('course-editor');
 
+  // Si on affiche le composant d'import PDF
+  if (isImportPdf) {
+    return <ImportPdfComponent />;
+  }
+  
+  // Si on affiche l'éditeur de cours
+  if (isCourseEditor) {
+    const courseId = location.pathname.split('/').pop() || '';
+    return <CourseEditor courseId={courseId} />;
+  }
+
+  // Sinon afficher le dashboard normal
   // Utilisation des mocks centralisés
   const recentCourses = MOCK_COURSES.slice(0, 3);
   const quickStartSteps = MOCK_QUICK_START_STEPS;

@@ -7,8 +7,6 @@ import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
-import ImportPdfPage from './pages/ImportPdfPage';
-import CourseEditorPage from './pages/CourseEditorPage';
 import { AuthProvider, RoleBasedRedirect, ProtectedRoute } from './components/auth';
 import { ROUTES } from './constants';
 
@@ -38,8 +36,9 @@ function App() {
             </ProtectedRoute>
           }>
             <Route path="dashboard" element={<TeacherDashboardPage />} />
-            <Route path="import-pdf" element={<ImportPdfPage />} />
-            <Route path="course-editor" element={<CourseEditorPage />} />
+            {/* Composants intégrés dans TeacherDashboardPage */}
+            <Route path="import-pdf" element={<TeacherDashboardPage />} />
+            <Route path="course-editor/:id" element={<TeacherDashboardPage />} />
             <Route path="quiz" element={<div>Quiz Page (À implémenter)</div>} />
             <Route path="analytics" element={<div>Analytics Page (À implémenter)</div>} />
             <Route path="courses" element={<div>Courses Page (À implémenter)</div>} />
