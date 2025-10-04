@@ -7,7 +7,6 @@ import {
   Home, 
   Upload, 
   BookOpen, 
-  HelpCircle, 
   BarChart3, 
   Settings,
   LogOut,
@@ -70,17 +69,10 @@ export default function Sidebar({ className = '', variant = 'teacher' }: Sidebar
           roles: ['teacher']
         },
         {
-          name: 'Mes cours',
+          name: 'Cours et quiz',
           href: ROUTES.TEACHER_COURSES,
           icon: BookOpen,
-          active: isActive(ROUTES.TEACHER_COURSES),
-          roles: ['teacher']
-        },
-        {
-          name: 'Quiz',
-          href: ROUTES.TEACHER_QUIZ,
-          icon: HelpCircle,
-          active: isActive(ROUTES.TEACHER_QUIZ),
+          active: isActive(ROUTES.TEACHER_COURSES) || isActive(ROUTES.TEACHER_QUIZ),
           roles: ['teacher']
         },
         {

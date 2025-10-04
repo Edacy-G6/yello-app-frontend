@@ -2,7 +2,7 @@ import { useLogin } from '../../hooks/useLogin';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
-import { MOCK_USERS } from '../../constants';
+import GoogleLoginButton from '../auth/GoogleLoginButton';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -24,10 +24,19 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
     onError: onError || (() => {}),
   });
 
-  const fillMockUser = (userType: keyof typeof MOCK_USERS) => {
-    const mockUser = MOCK_USERS[userType];
-    updateField('email', mockUser.email);
-    updateField('password', mockUser.password);
+  const fillTestUser = (userType: string) => {
+    const testUsers = {
+      teacher: { email: 'teacher@yello.com', password: 'teacher123' },
+      student: { email: 'student@yello.com', password: 'student123' },
+      parent: { email: 'parent@yello.com', password: 'parent123' },
+      admin: { email: 'admin@yello.com', password: 'admin123' }
+    };
+    
+    const user = testUsers[userType as keyof typeof testUsers];
+    if (user) {
+      updateField('email', user.email);
+      updateField('password', user.password);
+    }
   };
 
   return (
@@ -68,19 +77,6 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
           />
         </div>
 
-        <div className="flex items-center space-x-2">
-          <input
-            id="rememberMe"
-            type="checkbox"
-            checked={formData.rememberMe}
-            onChange={(e) => updateField('rememberMe', e.target.checked)}
-            disabled={isLoading}
-            className="rounded"
-          />
-          <label htmlFor="rememberMe" className="text-sm text-foreground">
-            Se souvenir de moi
-          </label>
-        </div>
 
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-md">
@@ -113,7 +109,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => fillMockUser('teacher')}
+              onClick={() => fillTestUser('teacher')}
               disabled={isLoading}
             >
               Enseignant
@@ -122,7 +118,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => fillMockUser('student')}
+              onClick={() => fillTestUser('student')}
               disabled={isLoading}
             >
               Élève
@@ -131,7 +127,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => fillMockUser('parent')}
+              onClick={() => fillTestUser('parent')}
               disabled={isLoading}
             >
               Parent
@@ -140,7 +136,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => fillMockUser('admin')}
+              onClick={() => fillTestUser('admin')}
               disabled={isLoading}
             >
               Admin
@@ -148,6 +144,26 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
           </div>
         </div>
       )}
+
+      {/* Séparateur */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">
+            Ou continuer avec
+          </span>
+        </div>
+      </div>
+
+      {/* Bouton Google */}
+      <GoogleLoginButton
+        onSuccess={onSuccess}
+        onError={onError}
+        disabled={isLoading}
+        className="w-full"
+      />
 
       <div className="text-center">
         <button

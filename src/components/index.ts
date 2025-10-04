@@ -5,3 +5,4 @@ export * from './ui';
 export * from './teacher';
 export * from './editor';
 export * from './sections';
+export * from './course';

@@ -1,20 +1,29 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Progress } from '../ui/progress';
+import { Badge } from '../ui/badge';
 import { ROUTES } from '../../constants';
-import { Upload, FileText, Sparkles } from 'lucide-react';
+import { aiService, type AIProcessingStep, type PDFAnalysisResult } from '../../services/aiService';
+import { courseService } from '../../services/courseService';
+import { Upload, FileText, Sparkles, CheckCircle, AlertCircle, Clock, Brain } from 'lucide-react';
 
 interface UploadedFile {
   name: string;
   size: number;
   type: string;
+  file: File; // Ajouter le fichier complet
 }
 
 export function ImportPdfComponent() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingSteps, setProcessingSteps] = useState<AIProcessingStep[]>([]);
+  const [currentStep, setCurrentStep] = useState<AIProcessingStep | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<PDFAnalysisResult | null>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const navigate = useNavigate();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -38,7 +47,8 @@ export function ImportPdfComponent() {
       setUploadedFile({
         name: pdfFile.name,
         size: pdfFile.size,
-        type: pdfFile.type
+        type: pdfFile.type,
+        file: pdfFile
       });
     }
   }, []);
@@ -51,22 +61,87 @@ export function ImportPdfComponent() {
         setUploadedFile({
           name: file.name,
           size: file.size,
-          type: file.type
+          type: file.type,
+          file: file
         });
       }
     }
   }, []);
 
+  const handleAnalyzePDF = async () => {
+    if (!uploadedFile) return;
+    
+    try {
+      const file = new File([], uploadedFile.name, { type: uploadedFile.type });
+      const analysis = await aiService.analyzePDF(file);
+      setAnalysisResult(analysis);
+      setShowAnalysis(true);
+    } catch (error) {
+      console.error('Erreur lors de l\'analyse:', error);
+    }
+  };
+
   const handleGenerateCourse = async () => {
     if (!uploadedFile) return;
     
     setIsProcessing(true);
+    setProcessingSteps([]);
+    setCurrentStep(null);
     
-    // Simulation du traitement
-    setTimeout(() => {
+    try {
+      // Utiliser le fichier complet stocké
+      const file = uploadedFile.file;
+      
+      // Utiliser le service de cours réel au lieu de la simulation
+      const generateData = {
+        title: uploadedFile.name.replace('.pdf', ''),
+        description: `Cours généré automatiquement à partir de ${uploadedFile.name}`,
+        subject: 'Général',
+        level: 'beginner',
+        tags: 'auto-generated'
+      };
+
+      const response = await courseService.generateCourseFromFile(file, generateData);
+      
+      if (response.success && response.data) {
+        // Suivre la progression de la génération
+        courseService.pollGenerationStatus(
+          response.data.generationId,
+          (progress) => {
+            // Convertir le progrès en étapes pour l'affichage
+            const step = {
+              id: 'generation',
+              title: 'Génération du cours',
+              description: progress.message || 'Génération en cours...',
+              progress: progress.progress,
+              status: progress.status === 'processing' ? 'processing' : 
+                     progress.status === 'completed' ? 'completed' : 'pending',
+              duration: 1000
+            };
+            
+            setCurrentStep(step);
+            setProcessingSteps([step]);
+          },
+          (progress) => {
+            // Génération terminée avec succès
+            if (progress.data?.courseId) {
+              navigate(`/teacher/course-editor/${progress.data.courseId}`);
+            } else {
+              navigate(ROUTES.TEACHER_COURSE_EDITOR);
+            }
+          },
+          (error) => {
+            console.error('Erreur lors de la génération:', error);
+            setIsProcessing(false);
+          }
+        );
+      } else {
+        throw new Error(response.message || 'Erreur lors de la génération');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la génération:', error);
       setIsProcessing(false);
-      navigate(ROUTES.TEACHER_COURSE_EDITOR);
-    }, 2000);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -167,26 +242,37 @@ export function ImportPdfComponent() {
                     </div>
                   </div>
 
-                  {/* Bouton de génération */}
-                  <div className="text-center">
-                    <Button 
-                      onClick={handleGenerateCourse}
-                      disabled={isProcessing}
-                      size="lg"
-                      className="bg-primary hover:bg-primary/90 min-w-[200px]"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Traitement en cours...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Générer cours
-                        </>
-                      )}
-                    </Button>
+                  {/* Boutons d'action */}
+                  <div className="text-center space-y-3">
+                    <div className="flex space-x-3 justify-center">
+                      <Button 
+                        onClick={handleAnalyzePDF}
+                        variant="outline"
+                        size="lg"
+                        className="min-w-[150px]"
+                      >
+                        <Brain className="h-4 w-4 mr-2" />
+                        Analyser
+                      </Button>
+                      <Button 
+                        onClick={handleGenerateCourse}
+                        disabled={isProcessing}
+                        size="lg"
+                        className="bg-primary hover:bg-primary/90 min-w-[150px]"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Traitement...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Générer cours
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Message d'information */}
@@ -200,6 +286,104 @@ export function ImportPdfComponent() {
             </Card>
           )}
         </div>
+
+        {/* Analyse PDF */}
+        {showAnalysis && analysisResult && (
+          <div className="max-w-4xl mx-auto mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Brain className="h-5 w-5" />
+                  <span>Analyse du PDF</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-foreground mb-2">Titre détecté</h4>
+                      <p className="text-sm text-muted-foreground">{analysisResult.title}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-medium text-foreground mb-1">Pages</h4>
+                        <p className="text-2xl font-bold text-primary">{analysisResult.pages}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-foreground mb-1">Mots</h4>
+                        <p className="text-2xl font-bold text-primary">{analysisResult.wordCount.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-foreground mb-2">Durée estimée</h4>
+                      <p className="text-sm text-muted-foreground">{analysisResult.estimatedDuration} minutes</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-foreground mb-2">Difficulté</h4>
+                      <Badge variant={analysisResult.difficulty === 'easy' ? 'default' : analysisResult.difficulty === 'medium' ? 'secondary' : 'destructive'}>
+                        {analysisResult.difficulty === 'easy' ? 'Facile' : analysisResult.difficulty === 'medium' ? 'Moyen' : 'Difficile'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-foreground mb-2">Sujets identifiés</h4>
+                    <div className="space-y-2">
+                      {analysisResult.topics.map((topic, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-muted-foreground">{topic}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Progression du traitement IA */}
+        {isProcessing && (
+          <div className="max-w-4xl mx-auto mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Sparkles className="h-5 w-5" />
+                  <span>Traitement par l'IA</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {processingSteps.map((step) => (
+                    <div key={step.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          {step.status === 'completed' ? (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          ) : step.status === 'processing' ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                          ) : step.status === 'error' ? (
+                            <AlertCircle className="h-5 w-5 text-destructive" />
+                          ) : (
+                            <Clock className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <div>
+                            <h4 className="font-medium text-foreground">{step.title}</h4>
+                            <p className="text-sm text-muted-foreground">{step.description}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {step.progress}%
+                        </span>
+                      </div>
+                      <Progress value={step.progress} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Informations sur le processus */}
         <div className="max-w-4xl mx-auto mt-12">

@@ -3,164 +3,142 @@ import type {
   LoginData, 
   RegisterData, 
   AuthUser,
-  ApiResponse 
+  UserRole
 } from '../types';
-import { MOCK_USERS } from '../constants';
-
-// Simulation d'un délai réseau
-const simulateNetworkDelay = (min = 500, max = 1500): Promise<void> => {
-  const delay = Math.random() * (max - min) + min;
-  return new Promise(resolve => setTimeout(resolve, delay));
-};
-
-// Génération d'un token mock
-const generateMockToken = (userId: string): string => {
-  return `mock_token_${userId}_${Date.now()}`;
-};
-
-// Génération d'un ID unique
-const generateId = (): string => {
-  return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
+import type { 
+  ApiResponse,
+  AuthApiResponse,
+  RegisterApiResponse
+} from '../types/api';
+import { ApiResponseConverter } from '../types/api';
+import { STORAGE_KEYS } from '../constants';
+import { apiService } from './apiService';
+import { googleAuthService, type GoogleAuthResponse } from './googleAuthService';
 
 class AuthService {
-  // Simulation d'une base de données en mémoire
-  private users: Map<string, AuthUser> = new Map();
-  private registeredUsers: Map<string, { password: string; userData: Partial<AuthUser> }> = new Map();
-
-  constructor() {
-    this.initializeMockUsers();
-  }
-
-  private initializeMockUsers(): void {
-    // Initialisation des utilisateurs de test
-    Object.values(MOCK_USERS).forEach((mockUser) => {
-      const userId = generateId();
-      const user: AuthUser = {
-        id: userId,
-        email: mockUser.email,
-        name: mockUser.name,
-        role: mockUser.role,
-        schoolId: 'school_mock_001',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${mockUser.name}`,
-        token: generateMockToken(userId),
-        refreshToken: generateMockToken(userId),
-        createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(),
-      };
-
-      this.users.set(mockUser.email, user);
-      this.registeredUsers.set(mockUser.email, {
-        password: mockUser.password,
-        userData: user
-      });
-    });
-  }
-
+  /**
+   * Connexion utilisateur
+   */
   async login(loginData: LoginData): Promise<ApiResponse<AuthResponse>> {
-    await simulateNetworkDelay();
+    try {
+      const response = await apiService.publicPost<AuthApiResponse>('/auth/login', loginData);
+      
+      console.log('Réponse API login:', response);
+      
+      if (response.success && response.data) {
+        const responseData = response.data;
+        
+        // Construire l'objet AuthResponse à partir de la réponse du backend
+        const authResponse: AuthResponse = {
+          user: {
+            id: responseData.user._id || responseData.user.id || '',
+            email: responseData.user.email || '',
+            name: `${responseData.user.name || ''} ${responseData.user.lastname || ''}`.trim(),
+            role: (responseData.user.role || 'teacher') as UserRole,
+            schoolId: responseData.user.schoolId || '',
+            token: responseData.access_token || '',
+            refreshToken: responseData.refresh_token || '',
+            createdAt: new Date(responseData.user.createdAt),
+            updatedAt: new Date(responseData.user.updatedAt),
+          },
+          message: response.message || 'Connexion réussie',
+        };
 
-    const { email, password } = loginData;
-    const registeredUser = this.registeredUsers.get(email);
+        // Sauvegarder le token et les données utilisateur
+        if (authResponse.user.token) {
+          localStorage.setItem(STORAGE_KEYS.TOKEN, authResponse.user.token);
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, authResponse.user.refreshToken);
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(authResponse.user));
+        }
 
-    if (!registeredUser) {
-      throw new Error('Email ou mot de passe incorrect');
-    }
-
-    if (registeredUser.password !== password) {
-      throw new Error('Email ou mot de passe incorrect');
-    }
-
-    const user = this.users.get(email);
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
-
-    // Mise à jour des tokens
-    const updatedUser: AuthUser = {
-      ...user,
-      token: generateMockToken(user.id),
-      refreshToken: generateMockToken(user.id),
-      updatedAt: new Date(),
-    };
-
-    this.users.set(email, updatedUser);
-
-    return {
-      success: true,
-      message: 'Connexion réussie',
-      data: {
-        user: updatedUser,
-        message: 'Bienvenue sur Yello !'
+        return ApiResponseConverter.success(response.message || 'Connexion réussie', authResponse);
+      } else {
+        throw new Error(response.message || 'Erreur de connexion');
       }
-    };
+    } catch (error) {
+      console.error('Erreur de connexion:', error);
+      throw new Error('Email ou mot de passe incorrect');
+    }
   }
 
+  /**
+   * Inscription utilisateur
+   */
   async register(registerData: RegisterData): Promise<ApiResponse<AuthResponse>> {
-    await simulateNetworkDelay();
+    try {
+      const response = await apiService.publicPost<RegisterApiResponse>('/auth/register', registerData);
+      
+      console.log('Réponse API register:', response);
+      
+      if (response.success && response.data) {
+        const responseData = response.data;
+        
+        // L'inscription est réussie, mais pas de token (connexion requise)
+        const authResponse: AuthResponse = {
+          user: {
+            id: responseData._id || responseData.id || '',
+            email: responseData.email || '',
+            name: `${responseData.name || ''} ${responseData.lastname || ''}`.trim(),
+            role: (responseData.role || 'teacher') as UserRole,
+            schoolId: responseData.schoolId || '',
+            token: '', // Pas de token lors de l'inscription
+            refreshToken: '', // Pas de refresh token lors de l'inscription
+            createdAt: new Date(responseData.createdAt || new Date()),
+            updatedAt: new Date(responseData.updatedAt || new Date()),
+          },
+          message: response.message || 'Inscription réussie',
+        };
 
-    const { email, password, confirmPassword, name, role, schoolId } = registerData;
-
-    // Validation
-    if (password !== confirmPassword) {
-      throw new Error('Les mots de passe ne correspondent pas');
-    }
-
-    if (password.length < 6) {
-      throw new Error('Le mot de passe doit contenir au moins 6 caractères');
-    }
-
-    if (this.registeredUsers.has(email)) {
-      throw new Error('Un compte avec cet email existe déjà');
-    }
-
-    // Création du nouvel utilisateur
-    const userId = generateId();
-    const newUser: AuthUser = {
-      id: userId,
-      email,
-      name,
-      role,
-      schoolId: schoolId || 'school_mock_001',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-      token: generateMockToken(userId),
-      refreshToken: generateMockToken(userId),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // Sauvegarde
-    this.users.set(email, newUser);
-    this.registeredUsers.set(email, {
-      password,
-      userData: newUser
-    });
-
-    return {
-      success: true,
-      message: 'Inscription réussie',
-      data: {
-        user: newUser,
-        message: 'Votre compte a été créé avec succès !'
+        return ApiResponseConverter.success(
+          response.message || 'Inscription réussie. Veuillez vous connecter.',
+          authResponse
+        );
+      } else {
+        throw new Error(response.message || 'Erreur lors de l\'inscription');
       }
-    };
+    } catch (error) {
+      console.error('Erreur d\'inscription:', error);
+      throw new Error('Erreur lors de l\'inscription. Vérifiez vos informations.');
+    }
   }
 
-  async refreshToken(_refreshToken: string): Promise<ApiResponse<{ token: string }>> {
-    await simulateNetworkDelay();
-
-    // Simulation simple - en réalité, on vérifierait le refresh token
-    const newToken = generateMockToken('refresh');
-
-    return {
-      success: true,
-      message: 'Token rafraîchi',
-      data: { token: newToken }
-    };
+  /**
+   * Rafraîchissement du token
+   */
+  async refreshToken(refreshToken: string): Promise<ApiResponse<{ token: string }>> {
+    try {
+      const response = await apiService.publicPost<{ token: string }>('/auth/refresh', {
+        refreshToken
+      });
+      
+      if (response.success) {
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.data.token);
+      }
+      
+      return response;
+    } catch {
+      throw new Error('Erreur lors du rafraîchissement du token');
+    }
   }
 
+  /**
+   * Déconnexion utilisateur
+   */
   async logout(): Promise<ApiResponse<{ message: string }>> {
-    await simulateNetworkDelay();
+    try {
+      const response = await apiService.post<{ message: string }>('/auth/logout');
+      
+      // Nettoyer le localStorage
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      
+      return response;
+    } catch {
+      // Même en cas d'erreur, on nettoie le localStorage
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER);
 
     return {
       success: true,
@@ -168,33 +146,93 @@ class AuthService {
       data: { message: 'Vous avez été déconnecté avec succès' }
     };
   }
-
-  async getCurrentUser(token: string): Promise<ApiResponse<AuthUser>> {
-    await simulateNetworkDelay();
-
-    // Simulation de vérification du token - on accepte tout token mock
-    if (!token.startsWith('mock_token_') && !token.startsWith('mock-token-')) {
-      throw new Error('Token invalide ou expiré');
-    }
-
-    // Pour les tokens mock, on retourne le premier utilisateur teacher par défaut
-    // En réalité, on décoderait le token pour obtenir l'ID utilisateur
-    const user = Array.from(this.users.values()).find(u => u.role === 'teacher');
-    
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
-
-    return {
-      success: true,
-      message: 'Utilisateur récupéré',
-      data: user
-    };
   }
 
-  // Méthode utilitaire pour obtenir les utilisateurs mockés (pour le développement)
-  getMockUsers(): typeof MOCK_USERS {
-    return MOCK_USERS;
+  /**
+   * Récupérer l'utilisateur actuel
+   */
+  async getCurrentUser(): Promise<ApiResponse<AuthUser>> {
+    try {
+      const response = await apiService.get<AuthUser>('/auth/profile-simple');
+      
+      if (response.success && response.data) {
+        // Mettre à jour les données utilisateur dans le localStorage
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.data));
+        return response;
+      } else {
+        return ApiResponseConverter.error(
+          response.message || 'Erreur lors de la récupération du profil'
+        );
+      }
+    } catch (error) {
+      console.error('Erreur API getCurrentUser:', error);
+      return ApiResponseConverter.error('Erreur lors de la récupération du profil utilisateur');
+    }
+  }
+
+  /**
+   * Vérifier si l'utilisateur est authentifié
+   */
+  isAuthenticated(): boolean {
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    return !!token;
+  }
+
+  /**
+   * Obtenir l'utilisateur depuis le localStorage
+   */
+  getStoredUser(): AuthUser | null {
+    try {
+      const userData = localStorage.getItem(STORAGE_KEYS.USER);
+      return userData ? JSON.parse(userData) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Authentification Google
+   */
+  async loginWithGoogle(credential: string): Promise<ApiResponse<GoogleAuthResponse>> {
+    try {
+      return await googleAuthService.authenticateWithGoogle(credential);
+    } catch (error) {
+      console.error('Erreur lors de l\'authentification Google:', error);
+      throw new Error('Erreur lors de l\'authentification Google');
+    }
+  }
+
+  /**
+   * Vérifie si l'utilisateur est connecté via Google
+   */
+  isGoogleUser(): boolean {
+    return googleAuthService.isGoogleUser();
+  }
+
+  /**
+   * Récupère les informations de l'utilisateur Google
+   */
+  getCurrentGoogleUser(): GoogleAuthResponse['data'] | null {
+    const googleResponse = googleAuthService.getCurrentGoogleUser();
+    return googleResponse?.user || null;
+  }
+
+  /**
+   * Déconnexion avec gestion Google
+   */
+  async logoutWithGoogle(): Promise<void> {
+    try {
+      // Déconnexion standard
+      await this.logout();
+      
+      // Déconnexion Google si nécessaire
+      if (this.isGoogleUser()) {
+        await googleAuthService.signOut();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion Google:', error);
+      throw error;
+    }
   }
 }
 

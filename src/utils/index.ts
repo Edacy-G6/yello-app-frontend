@@ -1,6 +1,6 @@
 // Utilitaires généraux
 
-// La fonction cn est maintenant dans src/lib/utils.ts pour shadcn/ui
+// La fonction cn est maintenant dans @/lib/utils.ts pour shadcn/ui
 
 export const formatDate = (date: Date | string): string => {
   const d = new Date(date);

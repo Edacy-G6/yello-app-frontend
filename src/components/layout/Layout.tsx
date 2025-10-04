@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
+import DebugAuth from '../DebugAuth';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function Layout() {
@@ -45,6 +46,7 @@ export default function Layout() {
           {/* Footer dynamique avec sidebar */}
           <Footer showSidebar={true} />
         </div>
+        
       </div>
     );
   }
@@ -61,6 +63,9 @@ export default function Layout() {
       
       {/* Footer dynamique sans sidebar */}
       <Footer showSidebar={false} />
+      
+      {/* Debug Auth (en développement) */}
+      <DebugAuth />
     </div>
   );
 }

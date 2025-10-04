@@ -14,7 +14,8 @@ export function useAuth() {
     setLoading, 
     setError, 
     clearError,
-    logout: storeLogout 
+    logout: storeLogout,
+    initializeAuth
   } = useAppStore();
 
   const login = useCallback(async (loginData: LoginData) => {
@@ -25,10 +26,7 @@ export function useAuth() {
       const response = await authService.login(loginData);
       const authUser = response.data.user;
 
-      // Sauvegarde des tokens
-      localStorage.setItem(STORAGE_KEYS.TOKEN, authUser.token);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, authUser.refreshToken);
-
+      // Les tokens sont déjà sauvegardés par authService.login()
       setUser(authUser);
       return response;
     } catch (error) {
@@ -48,11 +46,8 @@ export function useAuth() {
       const response = await authService.register(registerData);
       const authUser = response.data.user;
 
-      // Sauvegarde des tokens
-      localStorage.setItem(STORAGE_KEYS.TOKEN, authUser.token);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, authUser.refreshToken);
-
-      setUser(authUser);
+      // Ne pas définir l'utilisateur comme connecté lors de l'inscription
+      // L'utilisateur doit se connecter après l'inscription
       return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur d\'inscription';
@@ -61,7 +56,7 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  }, [setUser, setLoading, setError, clearError]);
+  }, [setLoading, setError, clearError]);
 
   const logout = useCallback(async () => {
     setLoading(true);
@@ -114,25 +109,74 @@ export function useAuth() {
   }, [user, setUser, logout]);
 
   const checkAuthStatus = useCallback(async () => {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    setLoading(true);
     
-    if (!token) {
-      return false;
-    }
-
     try {
-      const response = await authService.getCurrentUser(token);
-      setUser(response.data);
-      return true;
+      // D'abord, initialiser depuis localStorage
+      initializeAuth();
+      
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      const userData = localStorage.getItem(STORAGE_KEYS.USER);
+      
+      if (!token) {
+        setLoading(false);
+        return false;
+      }
+
+      // Si on a un token et des données utilisateur, on peut considérer l'utilisateur comme connecté
+      // et essayer de vérifier avec le serveur en arrière-plan
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          
+          // Vérifier avec le serveur en arrière-plan (sans bloquer l'UI)
+          authService.getCurrentUser()
+            .then(response => {
+              if (response.success) {
+                setUser(response.data);
+              } else {
+                console.warn('Token invalide côté serveur, mais on garde l\'utilisateur connecté localement');
+              }
+            })
+            .catch(error => {
+              console.warn('Erreur lors de la vérification serveur:', error);
+              // On ne déconnecte pas l'utilisateur en cas d'erreur réseau
+            });
+          
+          setLoading(false);
+          return true;
+        } catch (parseError) {
+          console.error('Erreur lors du parsing des données utilisateur:', parseError);
+          // Données corrompues, on nettoie
+          localStorage.removeItem(STORAGE_KEYS.TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.USER);
+          storeLogout();
+          setLoading(false);
+          return false;
+        }
+      } else {
+        // Pas de données utilisateur, on nettoie
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        storeLogout();
+        setLoading(false);
+        return false;
+      }
     } catch (error) {
-      // Token invalide, on nettoie
+      // Erreur générale, on nettoie
+      console.warn('Erreur lors de la vérification de l\'authentification:', error instanceof Error ? error.message : 'Erreur inconnue');
+      
       localStorage.removeItem(STORAGE_KEYS.TOKEN);
       localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-      console.error('Erreur lors de la vérification de l\'authentification:', error);
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      
       storeLogout();
+      setLoading(false);
       return false;
     }
-  }, [setUser, storeLogout]);
+  }, [setUser, storeLogout, initializeAuth, setLoading]);
 
   const hasRole = useCallback((role: string | string[]) => {
     if (!user) return false;
