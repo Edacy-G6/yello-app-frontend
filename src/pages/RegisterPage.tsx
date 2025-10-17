@@ -7,7 +7,7 @@ export default function RegisterPage() {
   const navigate = useNavigate();
 
   const handleRegisterSuccess = () => {
-    navigate(ROUTES.DASHBOARD, { replace: true });
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   const handleRegisterError = (error: string) => {

@@ -7,13 +7,14 @@ import {
   Home, 
   Upload, 
   BookOpen, 
-  HelpCircle, 
   BarChart3, 
   Settings,
   LogOut,
   Users,
   TrendingUp,
   Shield,
+  GraduationCap,
+  UserCheck,
 //   Sun,
 //   Moon
 } from 'lucide-react';
@@ -70,17 +71,24 @@ export default function Sidebar({ className = '', variant = 'teacher' }: Sidebar
           roles: ['teacher']
         },
         {
-          name: 'Mes cours',
+          name: 'Cours et quiz',
           href: ROUTES.TEACHER_COURSES,
           icon: BookOpen,
-          active: isActive(ROUTES.TEACHER_COURSES),
+          active: isActive(ROUTES.TEACHER_COURSES) || isActive(ROUTES.TEACHER_QUIZ),
           roles: ['teacher']
         },
         {
-          name: 'Quiz',
-          href: ROUTES.TEACHER_QUIZ,
-          icon: HelpCircle,
-          active: isActive(ROUTES.TEACHER_QUIZ),
+          name: 'Classes',
+          href: ROUTES.TEACHER_CLASSES,
+          icon: GraduationCap,
+          active: isActive(ROUTES.TEACHER_CLASSES),
+          roles: ['teacher']
+        },
+        {
+          name: 'Étudiants',
+          href: ROUTES.TEACHER_STUDENTS,
+          icon: UserCheck,
+          active: isActive(ROUTES.TEACHER_STUDENTS),
           roles: ['teacher']
         },
         {

@@ -47,6 +47,38 @@ npm run preview
 npm run test
 npm run test:ui
 npm run test:coverage
+```
+
+## 🧪 Utilisateurs de Test
+
+En mode développement, la page de connexion propose des boutons pour tester rapidement avec des utilisateurs prédéfinis :
+
+- **Enseignants** : Marie Dubois, Jean Martin, Sophie Bernard
+- **Étudiants** : Alice Dupont, Bob Leroy, Claire Moreau, etc.
+- **Parents** : Camille Laurent, Pierre Moreau
+- **Admin** : Admin Yello
+
+**Mot de passe pour tous :** `password123`
+
+> 📖 Voir [DEVELOPMENT_USERS.md](./DEVELOPMENT_USERS.md) pour la liste complète et les détails.
+
+## 🚀 Démarrage Rapide
+
+1. **Backend** (dans un terminal) :
+   ```bash
+   cd ../yello-app-backend
+   yarn install
+   yarn seed:complete  # Charger les données de test
+   yarn start:dev
+   ```
+
+2. **Frontend** (dans un autre terminal) :
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+3. **Se connecter** : Utilisez les boutons de test sur la page de connexion
 
 # Linting et formatage
 npm run lint

@@ -20,6 +20,7 @@ interface AppState {
   setError: (error: string | null) => void;
   clearError: () => void;
   logout: () => void;
+  initializeAuth: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -51,6 +52,28 @@ export const useAppStore = create<AppState>()(
         isAuthenticated: false,
         error: null 
       }),
+
+      // Action pour initialiser l'état depuis localStorage
+      initializeAuth: () => {
+        const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+        const userData = localStorage.getItem(STORAGE_KEYS.USER);
+        
+        if (token && userData) {
+          try {
+            const user = JSON.parse(userData);
+            set({ 
+              user, 
+              isAuthenticated: true 
+            });
+          } catch (error) {
+            console.error('Erreur lors du parsing des données utilisateur:', error);
+            // Nettoyer les données corrompues
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.USER);
+            localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+          }
+        }
+      },
     }),
     {
       name: STORAGE_KEYS.USER,
@@ -58,6 +81,20 @@ export const useAppStore = create<AppState>()(
         user: state.user, 
         isAuthenticated: state.isAuthenticated 
       }),
+      // Callback appelé après la réhydratation
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Vérifier la cohérence entre localStorage et store
+          const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+          if (!token && state.isAuthenticated) {
+            // Token manquant mais utilisateur marqué comme connecté
+            state.setUser(null);
+          } else if (token && !state.isAuthenticated && state.user) {
+            // Token présent mais utilisateur pas marqué comme connecté
+            state.setUser(state.user);
+          }
+        }
+      },
     }
   )
 );

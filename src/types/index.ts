@@ -19,7 +19,6 @@ export interface AuthUser extends User {
 export interface LoginData {
   email: string;
   password: string;
-  rememberMe?: boolean;
 }
 
 export interface RegisterData {
@@ -38,11 +37,45 @@ export interface AuthResponse {
 
 export type UserRole = 'teacher' | 'student' | 'parent' | 'admin';
 
-export interface ApiResponse<T> {
-  data: T;
-  message: string;
-  success: boolean;
-}
+// Réexporter les types d'API centralisés
+export type { 
+  ApiResponse,
+  StandardApiResponse,
+  ApiError,
+  PaginatedApiResponse,
+  AuthApiResponse,
+  RegisterApiResponse,
+  CourseStatsResponse,
+  ApiResponseConverter
+} from './api';
+
+// Réexporter les types de classes
+export type {
+  Classe,
+  ClasseListDto,
+  ClasseResponseDto,
+  CreateClasseDto,
+  UpdateClasseDto,
+  EnrollStudentDto,
+  ClasseSettings,
+  Schedule,
+  Enrollment,
+  ClasseStats,
+  ClasseStatsDto,
+  ClasseFilters,
+  ClasseStatus,
+  EnrollmentStatus,
+  ScheduleFormData,
+  ClasseSettingsFormData,
+  ClasseFormData,
+  ClasseApiResponse,
+  UseClassesOptions,
+  UseClasseOptions,
+  CreateClasseMutation,
+  UpdateClasseMutation,
+  EnrollStudentMutation,
+  UnenrollStudentMutation
+} from './classe';
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -73,42 +106,82 @@ export interface AuthState {
 export interface Course {
   id: number;
   title: string;
-  generatedAt: string;
+  description?: string;
   type: 'pdf' | 'manual' | 'template';
   status: 'draft' | 'completed' | 'published' | 'archived';
-  studentCount: number;
-  quizCount: number;
-  description?: string;
   schoolLevel?: string;
   keywords?: string[];
+  modules?: Module[]; // Optionnel car peut ne pas être chargé initialement
+  studentCount: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface CourseContent {
+export interface Module {
   id: string;
-  type: 'heading' | 'paragraph' | 'formula' | 'example' | 'exercise' | 'image' | 'video';
+  courseId: number;
+  title: string;
+  order: number;
+  description?: string;
+  content: ModuleContent[];
+  quiz: Quiz;
+  isCompleted?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ModuleContent {
+  id: string;
+  moduleId: string;
+  type: 'heading' | 'paragraph' | 'formula' | 'example' | 'exercise' | 'image' | 'video' | 'section';
   level: 1 | 2 | 3;
+  title?: string;
   content: string;
+  order: number;
   metadata?: Record<string, unknown>;
 }
 
 export interface Quiz {
   id: string;
-  courseId: number;
+  moduleId: string;
   title: string;
+  description?: string;
   questions: QuizQuestion[];
+  duration?: number; // en minutes
+  passingScore?: number; // score minimum pour réussir
+  attempts?: number; // nombre de tentatives autorisées
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface QuizQuestion {
   id: string;
+  quizId: string;
   type: 'multiple-choice' | 'true-false' | 'text' | 'numerical';
   question: string;
   options?: string[];
   correctAnswer: string | number;
   explanation?: string;
+  points: number;
+  order: number;
+}
+
+export interface QuizAttempt {
+  id: string;
+  quizId: string;
+  studentId: string;
+  answers: QuizAnswer[];
+  score: number;
+  isCompleted: boolean;
+  startedAt: Date;
+  completedAt?: Date;
+}
+
+export interface QuizAnswer {
+  questionId: string;
+  answer: string | number;
+  isCorrect: boolean;
   points: number;
 }
 

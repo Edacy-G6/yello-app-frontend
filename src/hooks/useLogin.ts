@@ -12,7 +12,6 @@ export function useLogin(options: UseLoginOptions = {}) {
   const [formData, setFormData] = useState<LoginData>({
     email: '',
     password: '',
-    rememberMe: false,
   });
 
   const updateField = (field: keyof LoginData, value: string | boolean) => {
@@ -41,7 +40,6 @@ export function useLogin(options: UseLoginOptions = {}) {
     setFormData({
       email: '',
       password: '',
-      rememberMe: false,
     });
     clearError();
   };
