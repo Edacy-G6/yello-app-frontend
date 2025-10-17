@@ -162,8 +162,16 @@ export const useCourseGenerationAdvanced = (): UseCourseGenerationAdvancedReturn
   }, [success, showError, info, updateStats]);
 
   const pollGenerationStatus = useCallback(async (generationId: string) => {
+    const maxPollTime = 10 * 60 * 1000; // 10 minutes for advanced generation
+    const startTime = Date.now();
+    let delay = 2000; // 2 secondes
+
     try {
       const poll = async (): Promise<void> => {
+        if (Date.now() - startTime > maxPollTime) {
+          throw new Error('La génération a pris trop de temps.');
+        }
+
         // Vérifier si la génération a été annulée
         if (abortControllerRef.current?.signal.aborted) {
           return;
@@ -193,8 +201,11 @@ export const useCourseGenerationAdvanced = (): UseCourseGenerationAdvancedReturn
           } else if (progress.status === 'failed') {
             throw new Error(progress.error || 'Erreur lors de la génération');
           } else if (progress.status === 'processing' || progress.status === 'pending') {
-            // Continuer le polling après 2 secondes
-            setTimeout(poll, 2000);
+            // Exponential backoff with jitter
+            delay = Math.min(delay * 1.5, 30000); // Augmenter de 50%, max 30s
+            const jitter = delay * 0.1 * Math.random();
+            console.log(`Polling again in ${Math.round((delay + jitter)/1000)}s`);
+            setTimeout(poll, delay + jitter);
           }
         } else {
           throw new Error(response.message || 'Erreur lors de la récupération du statut');

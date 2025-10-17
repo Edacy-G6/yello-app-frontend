@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import Sidebar from './Sidebar';
-import DebugAuth from '../DebugAuth';
+// import DebugAuth from '../DebugAuth';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function Layout() {
@@ -65,7 +65,7 @@ export default function Layout() {
       <Footer showSidebar={false} />
       
       {/* Debug Auth (en développement) */}
-      <DebugAuth />
+      {/* <DebugAuth /> */}
     </div>
   );
 }

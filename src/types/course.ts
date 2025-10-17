@@ -102,6 +102,7 @@ export interface GenerationProgress {
   message?: string;
   data?: any;
   error?: string;
+  course?: Course;
   createdAt: Date;
   updatedAt: Date;
 }

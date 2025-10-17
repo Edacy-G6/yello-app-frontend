@@ -17,6 +17,10 @@ import StudentCoursesPage from './pages/StudentCoursesPage';
 import StudentProgressPage from './pages/StudentProgressPage';
 import StudentCourseDetailPage from './pages/StudentCourseDetailPage';
 import ParentDashboardPage from './pages/ParentDashboardPage';
+import TeacherClassesPage from './pages/TeacherClassesPage';
+import TeacherClassDetailPage from './pages/TeacherClassDetailPage';
+import TeacherClassFormPage from './pages/TeacherClassFormPage';
+import TeacherStudentsPage from './pages/TeacherStudentsPage';
 import { AuthProvider, RoleBasedRedirect, ProtectedRoute } from './components/auth';
 import { ROUTES } from './constants';
 import { Toaster } from 'sonner';
@@ -60,6 +64,12 @@ function App() {
             <Route path="courses" element={<CoursesPage />} />
             <Route path="courses/:courseId" element={<CourseDetailPage />} />
             <Route path="course-generation" element={<CourseGenerationPage />} />
+            {/* Routes classes et étudiants */}
+            <Route path="classes" element={<TeacherClassesPage />} />
+            <Route path="classes/create" element={<TeacherClassFormPage />} />
+            <Route path="classes/:id" element={<TeacherClassDetailPage />} />
+            <Route path="classes/:id/edit" element={<TeacherClassFormPage />} />
+            <Route path="students" element={<TeacherStudentsPage />} />
           </Route>
           
           {/* Routes étudiant - protégées avec layout */}

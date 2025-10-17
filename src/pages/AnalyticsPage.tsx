@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Button } from '../components/ui/button';
 import { analyticsService, type AnalyticsData, type DashboardStats } from '../services';
@@ -24,12 +23,7 @@ export default function AnalyticsPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAnalytics();
-    loadStats();
-  }, [selectedPeriod]);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -39,10 +33,12 @@ export default function AnalyticsPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des analytics');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [selectedPeriod]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const response = await analyticsService.getDashboardStats();
       if (response.success && response.data) {
@@ -51,7 +47,12 @@ export default function AnalyticsPage() {
     } catch (err) {
       console.error('Erreur lors du chargement des statistiques:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAnalytics();
+    loadStats();
+  }, [loadAnalytics, loadStats]);
 
   const handleRefresh = async () => {
     await Promise.all([loadAnalytics(), loadStats()]);
@@ -92,7 +93,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  if (isLoading && !analytics) {
+  if (isLoading && !analytics && !stats) {
     return (
       <div className="p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
@@ -113,6 +114,21 @@ export default function AnalyticsPage() {
             <p className="text-red-600 mb-4">{error}</p>
             <Button onClick={handleRefresh} variant="outline">
               Réessayer
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics && !stats) {
+    return (
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">Aucune donnée disponible</p>
+            <Button onClick={handleRefresh} variant="outline">
+              Charger les données
             </Button>
           </div>
         </div>
@@ -165,10 +181,17 @@ export default function AnalyticsPage() {
               variant={selectedPeriod === period ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedPeriod(period)}
+              disabled={isLoading}
             >
               {getPeriodLabel(period)}
             </Button>
           ))}
+          {isLoading && (
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Chargement...</span>
+            </div>
+          )}
         </div>
 
         {/* Cartes de statistiques principales */}
@@ -179,9 +202,9 @@ export default function AnalyticsPage() {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCourses}</div>
+              <div className="text-2xl font-bold">{stats?.totalCourses || 0}</div>
               <p className="text-xs text-muted-foreground">
-                +{stats.monthlyGrowth}% ce mois
+                +{typeof stats?.monthlyGrowth === 'number' ? stats.monthlyGrowth : stats?.monthlyGrowth?.courses || 0}% ce mois
               </p>
             </CardContent>
           </Card>
@@ -192,7 +215,7 @@ export default function AnalyticsPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudents}</div>
+              <div className="text-2xl font-bold">{stats?.totalStudents || 0}</div>
               <p className="text-xs text-muted-foreground">
                 +12% ce mois
               </p>
@@ -205,7 +228,7 @@ export default function AnalyticsPage() {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completionRate}%</div>
+              <div className="text-2xl font-bold">{analytics?.studentEngagement?.completionRate || 0}%</div>
               <p className="text-xs text-muted-foreground">
                 +3.2% ce mois
               </p>
@@ -218,7 +241,7 @@ export default function AnalyticsPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.averageScore}/100</div>
+              <div className="text-2xl font-bold">{analytics?.quizStatistics?.averageScore || 0}/100</div>
               <p className="text-xs text-muted-foreground">
                 +2.1 points ce mois
               </p>
@@ -241,7 +264,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analytics.monthlyStats.map((stat) => (
+                {analytics?.timeBasedData?.monthly?.map((stat) => (
                   <div key={stat.month} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{stat.month}</span>
@@ -265,13 +288,17 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span>Réussite</span>
-                        <span>{stat.completion}%</span>
+                        <span>Quiz</span>
+                        <span>{stat.quizzes}</span>
                       </div>
-                      <Progress value={stat.completion} className="h-2" />
+                      <Progress value={(stat.quizzes / 50) * 100} className="h-2" />
                     </div>
                   </div>
-                ))}
+                )) || (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Aucune donnée disponible pour cette période
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -289,37 +316,35 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analytics.recentActivity.map((activity) => (
+                {stats?.recentActivity?.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 p-3 border border-border rounded-lg">
                     <div className="flex-shrink-0">
                       <div className={`w-2 h-2 rounded-full ${
-                        activity.type === 'course_completed' ? 'bg-green-500' :
-                        activity.type === 'quiz_taken' ? 'bg-blue-500' :
-                        'bg-yellow-500'
+                        activity.type === 'quiz_completed' ? 'bg-green-500' :
+                        activity.type === 'course_created' ? 'bg-blue-500' :
+                        activity.type === 'enrollment' ? 'bg-yellow-500' :
+                        'bg-gray-500'
                       }`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-foreground truncate">
-                          {activity.student}
+                          {activity.user}
                         </p>
                         <span className="text-xs text-muted-foreground">
                           {activity.timestamp}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {activity.title}
+                        {activity.description}
                       </p>
-                      {activity.score && (
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            Score: {activity.score}/100
-                          </Badge>
-                        </div>
-                      )}
                     </div>
                   </div>
-                ))}
+                )) || (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Aucune activité récente
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -335,36 +360,38 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.recentActivity
-                .filter(activity => activity.score)
-                .map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-muted rounded-lg">
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-foreground">{activity.title}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.student} • {activity.timestamp}
-                        </p>
-                      </div>
+              {analytics?.topCourses?.map((course) => (
+                <div key={course.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 bg-muted rounded-lg">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-foreground">
-                          {activity.score}/100
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Score
-                        </div>
-                      </div>
-                      <div className="w-20">
-                        <Progress value={activity.score} className="h-2" />
-                      </div>
+                    <div>
+                      <h4 className="font-medium text-foreground">{course.title}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {course.enrollmentCount} inscriptions • Note: {course.averageRating}/5
+                      </p>
                     </div>
                   </div>
-                ))}
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-foreground">
+                        {course.completionRate}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Taux de réussite
+                      </div>
+                    </div>
+                    <div className="w-20">
+                      <Progress value={course.completionRate} className="h-2" />
+                    </div>
+                  </div>
+                </div>
+              )) || (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucune donnée de cours disponible
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -372,3 +399,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

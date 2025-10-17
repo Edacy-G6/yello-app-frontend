@@ -37,6 +37,14 @@ export const ROUTES = {
   PARENT_CHILDREN: '/parent/children',
   PARENT_REPORTS: '/parent/reports',
   
+  // Routes enseignant - Classes et Étudiants
+  TEACHER_CLASSES: '/teacher/classes',
+  TEACHER_CLASS_DETAIL: '/teacher/classes/:id',
+  TEACHER_CLASS_CREATE: '/teacher/classes/create',
+  TEACHER_CLASS_EDIT: '/teacher/classes/:id/edit',
+  TEACHER_STUDENTS: '/teacher/students',
+  TEACHER_STUDENT_DETAIL: '/teacher/students/:id',
+  
   // Routes admin
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_USERS: '/admin/users',

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -8,8 +8,8 @@ import { Progress } from '../ui/progress';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Upload, FileText, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { courseService } from '../../services';
-import type { GenerateCourseFromFileData, GenerationProgress, GenerationStatus } from '../../types/course';
+import { useCourseGeneration } from '../../hooks/useCourseGeneration';
+import type { GenerateCourseFromFileData, GenerationStatus } from '../../types/course';
 import { toast } from 'sonner';
 
 interface CourseGeneratorProps {
@@ -27,10 +27,24 @@ export default function CourseGenerator({ onCourseGenerated, onClose }: CourseGe
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const {
+    isGenerating,
+    generationProgress,
+    generatedCourse,
+    error,
+    generateCourse,
+    resetError,
+  } = useCourseGeneration();
+
+  // Effet pour gérer la fin de génération
+  useEffect(() => {
+    if (generatedCourse && onCourseGenerated) {
+      toast.success('Cours généré avec succès !');
+      onCourseGenerated(generatedCourse._id);
+    }
+  }, [generatedCourse, onCourseGenerated]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -50,7 +64,7 @@ export default function CourseGenerator({ onCourseGenerated, onClose }: CourseGe
       }
 
       setSelectedFile(file);
-      setError(null);
+      resetError();
       
       // Auto-remplir le titre si vide
       if (!formData.title) {
@@ -75,44 +89,10 @@ export default function CourseGenerator({ onCourseGenerated, onClose }: CourseGe
       return;
     }
 
-    setIsGenerating(true);
-    setError(null);
-    setGenerationProgress(null);
-
     try {
-      const response = await courseService.generateCourseFromFile(selectedFile, formData);
-      
-      if (response.success && response.data) {
-        setGenerationProgress(response.data);
-        
-        // Démarrer le polling pour suivre le progrès
-        courseService.pollGenerationStatus(
-          response.data.generationId,
-          (progress) => {
-            setGenerationProgress(progress);
-          },
-          (progress) => {
-            setGenerationProgress(progress);
-            setIsGenerating(false);
-            toast.success('Cours généré avec succès !');
-            if (progress.data?.courseId && onCourseGenerated) {
-              onCourseGenerated(progress.data.courseId);
-            }
-          },
-          (error) => {
-            setError(error);
-            setIsGenerating(false);
-            toast.error('Erreur lors de la génération du cours');
-          }
-        );
-      } else {
-        throw new Error(response.message || 'Erreur lors de la génération');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      setError(errorMessage);
-      setIsGenerating(false);
-      toast.error('Erreur lors de la génération du cours');
+      await generateCourse(selectedFile, formData);
+    } catch (err) {
+      console.error('Erreur lors de la génération:', err);
     }
   };
 

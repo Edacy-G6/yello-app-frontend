@@ -125,6 +125,18 @@ class CourseService {
   }
 
   /**
+   * Met à jour le statut d'un cours
+   */
+  async updateCourseStatus(courseId: string, status: string): Promise<ApiResponse<Course>> {
+    try {
+      return await apiService.put<Course>(`/courses/${courseId}/status`, { status });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      throw new Error('Erreur lors de la mise à jour du statut');
+    }
+  }
+
+  /**
    * Publie un cours
    */
   async publishCourse(courseId: string): Promise<ApiResponse<Course>> {
@@ -156,6 +168,18 @@ class CourseService {
       return await apiService.get<GenerationProgress>(`/courses/generation/${generationId}/status`);
     } catch (error) {
       console.error('Erreur lors de la récupération du statut:', error);
+      
+      // Gestion spécifique des erreurs de throttling
+      if (error instanceof Error) {
+        if (error.message.includes('429')) {
+          throw new Error('Trop de requêtes. Veuillez patienter avant de réessayer.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('La requête a pris trop de temps. Veuillez réessayer.');
+        } else if (error.message.includes('Network Error')) {
+          throw new Error('Erreur de connexion. Vérifiez votre connexion internet.');
+        }
+      }
+      
       throw new Error('Erreur lors de la récupération du statut');
     }
   }

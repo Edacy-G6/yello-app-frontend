@@ -153,7 +153,7 @@ class AuthService {
    */
   async getCurrentUser(): Promise<ApiResponse<AuthUser>> {
     try {
-      const response = await apiService.get<AuthUser>('/auth/profile-simple');
+      const response = await apiService.get<AuthUser>('/auth/profile');
       
       if (response.success && response.data) {
         // Mettre à jour les données utilisateur dans le localStorage

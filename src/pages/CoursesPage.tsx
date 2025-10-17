@@ -9,6 +9,7 @@ import CourseNavigation from '../components/layout/CourseNavigation';
 import { SCHOOL_LEVELS, ROUTES } from '../constants';
 import { courseService } from '../services/courseService';
 import type { Course } from '../types/course';
+import { CourseStatus } from '../types/course';
 import { 
   Search, 
   Plus, 
@@ -21,9 +22,9 @@ import {
   Eye,
   Download,
   Share2,
-  Archive,
   Sparkles
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,16 +82,40 @@ export default function CoursesPage() {
     return matchesSearch && matchesStatus && matchesLevel;
   });
 
-  const handleDelete = (courseId: string) => {
-    console.log('Supprimer le cours:', courseId);
+  const handleDelete = async (courseId: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce cours ? Cette action est irréversible.')) {
+      return;
+    }
+    
+    try {
+      const response = await courseService.deleteCourse(courseId);
+      if (response.success) {
+        setCourses(courses.filter(c => c._id !== courseId));
+        toast.success('Cours supprimé avec succès');
+      } else {
+        toast.error(response.message || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error('Erreur lors de la suppression du cours');
+    }
   };
 
-  const handleArchive = (courseId: string) => {
-    console.log('Archiver le cours:', courseId);
-  };
-
-  const handlePublish = (courseId: string) => {
-    console.log('Publier le cours:', courseId);
+  const handlePublish = async (courseId: string) => {
+    try {
+      const response = await courseService.updateCourseStatus(courseId, 'published');
+      if (response.success) {
+        setCourses(courses.map(c => 
+          c._id === courseId ? { ...c, status: CourseStatus.PUBLISHED } : c
+        ));
+        toast.success('Cours publié avec succès');
+      } else {
+        toast.error(response.message || 'Erreur lors de la publication');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la publication:', error);
+      toast.error('Erreur lors de la publication du cours');
+    }
   };
 
   if (error) {
@@ -319,17 +344,6 @@ export default function CoursesPage() {
                       </Button>
                     )}
                     
-                    {course.status === 'published' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleArchive(course._id)}
-                        className="flex-1"
-                      >
-                        <Archive className="h-3 w-3 mr-1" />
-                        Archiver
-                      </Button>
-                    )}
                     
                     <Button 
                       variant="outline" 

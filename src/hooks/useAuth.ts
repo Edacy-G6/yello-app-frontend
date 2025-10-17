@@ -136,12 +136,13 @@ export function useAuth() {
               if (response.success) {
                 setUser(response.data);
               } else {
-                console.warn('Token invalide côté serveur, mais on garde l\'utilisateur connecté localement');
+                console.warn('Token invalide côté serveur, déconnexion.');
+                logout();
               }
             })
             .catch(error => {
-              console.warn('Erreur lors de la vérification serveur:', error);
-              // On ne déconnecte pas l'utilisateur en cas d'erreur réseau
+              console.warn('Erreur lors de la vérification serveur, déconnexion.', error);
+              logout();
             });
           
           setLoading(false);

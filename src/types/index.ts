@@ -49,6 +49,34 @@ export type {
   ApiResponseConverter
 } from './api';
 
+// Réexporter les types de classes
+export type {
+  Classe,
+  ClasseListDto,
+  ClasseResponseDto,
+  CreateClasseDto,
+  UpdateClasseDto,
+  EnrollStudentDto,
+  ClasseSettings,
+  Schedule,
+  Enrollment,
+  ClasseStats,
+  ClasseStatsDto,
+  ClasseFilters,
+  ClasseStatus,
+  EnrollmentStatus,
+  ScheduleFormData,
+  ClasseSettingsFormData,
+  ClasseFormData,
+  ClasseApiResponse,
+  UseClassesOptions,
+  UseClasseOptions,
+  CreateClasseMutation,
+  UpdateClasseMutation,
+  EnrollStudentMutation,
+  UnenrollStudentMutation
+} from './classe';
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;

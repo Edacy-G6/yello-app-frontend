@@ -13,6 +13,8 @@ import {
   Users,
   TrendingUp,
   Shield,
+  GraduationCap,
+  UserCheck,
 //   Sun,
 //   Moon
 } from 'lucide-react';
@@ -73,6 +75,20 @@ export default function Sidebar({ className = '', variant = 'teacher' }: Sidebar
           href: ROUTES.TEACHER_COURSES,
           icon: BookOpen,
           active: isActive(ROUTES.TEACHER_COURSES) || isActive(ROUTES.TEACHER_QUIZ),
+          roles: ['teacher']
+        },
+        {
+          name: 'Classes',
+          href: ROUTES.TEACHER_CLASSES,
+          icon: GraduationCap,
+          active: isActive(ROUTES.TEACHER_CLASSES),
+          roles: ['teacher']
+        },
+        {
+          name: 'Étudiants',
+          href: ROUTES.TEACHER_STUDENTS,
+          icon: UserCheck,
+          active: isActive(ROUTES.TEACHER_STUDENTS),
           roles: ['teacher']
         },
         {
